@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InstaScore | Ultra-Moderní Sportovní Dashboard</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#08090c',
+                        cardBg: '#12141c',
+                        neonGreen: '#00ff66',
+                        glassBorder: 'rgba(255, 255, 255, 0.08)',
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #08090c;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(18, 20, 28, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glassBorder);
+        }
+
+        /* Live Indicator Animation */
+        @keyframes pulse-live {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 102, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 255, 102, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 102, 0); }
+        }
+        .live-dot {
+            animation: pulse-live 2s infinite;
+        }
+
+        /* Goal Flash Animation */
+        @keyframes goal-flash {
+            0% { background-color: transparent; }
+            20% { background-color: rgba(0, 255, 102, 0.4); transform: scale(1.02); }
+            100% { background-color: transparent; transform: scale(1); }
+        }
+        .goal-scored {
+            animation: goal-flash 3s ease-out forwards;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #08090c;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1f212a;
+            border-radius: 10px;
+        }
+
+        .match-row {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .match-row:hover {
+            background: rgba(255, 255, 255, 0.03);
+            transform: translateX(4px);
+        }
+
+        .sidebar-item.active {
+            color: #00ff66;
+            background: linear-gradient(90deg, rgba(0, 255, 102, 0.1) 0%, transparent 100%);
+            border-right: 3px solid #00ff66;
+        }
+
+        .neo-shadow {
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.15);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-64 border-r border-white/5 flex flex-col z-50 bg-[#08090c]">
+            <!-- Logo Area -->
+            <div class="p-8">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-darkBg border border-neonGreen rounded-xl flex items-center justify-center neo-shadow">
+                        <i class="fas fa-bolt text-neonGreen"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-extrabold tracking-tight leading-none">
+                            Insta<span class="text-neonGreen">Score</span>
+                        </h1>
+                        <p class="text-[10px] text-gray-500 font-bold tracking-[0.2em] uppercase mt-1">Live Sports Data</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 px-4 space-y-2 mt-4 overflow-y-auto custom-scrollbar">
+                <p class="px-4 text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-4">Hlavní Menu</p>
+                
+                <button onclick="setSport('all')" class="sidebar-item active w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all group" id="btn-all">
+                    <i class="fas fa-layer-group w-5"></i>
+                    <span class="font-semibold text-sm">Všechny sporty</span>
+                </button>
+                
+                <button onclick="setSport('fotbal')" class="sidebar-item w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-400 hover:text-white transition-all group" id="btn-fotbal">
+                    <i class="fas fa-soccer-ball w-5"></i>
+                    <span class="font-semibold text-sm">Fotbal</span>
+                </button>
+
+                <button onclick="setSport('hokej')" class="sidebar-item w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-400 hover:text-white transition-all group" id="btn-hokej">
+                    <i class="fas fa-hockey-puck w-5"></i>
+                    <span class="font-semibold text-sm">Hokej</span>
+                </button>
+
+                <button onclick="setSport('tenis')" class="sidebar-item w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-400 hover:text-white transition-all group" id="btn-tenis">
+                    <i class="fas fa-table-tennis-paddle-ball w-5"></i>
+                    <span class="font-semibold text-sm">Tenis</span>
+                </button>
+
+                <div class="pt-8">
+                    <p class="px-4 text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-4">Moje</p>
+                    <button class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-400 hover:text-white transition-all">
+                        <i class="fas fa-star w-5"></i>
+                        <span class="font-semibold text-sm">Oblíbené</span>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Bottom Profile -->
+            <div class="p-4 mt-auto">
+                <div class="glass-panel p-4 rounded-2xl flex items-center gap-3 border border-white/5">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-neonGreen to-emerald-500 flex items-center justify-center font-bold text-black text-xs">
+                        JD
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs font-bold truncate">Jan Dostál</p>
+                        <p class="text-[10px] text-neonGreen">Premium Účet</p>
+                    </div>
+                    <i class="fas fa-right-from-bracket text-gray-600 text-xs cursor-pointer hover:text-white"></i>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col relative overflow-hidden bg-gradient-to-b from-[#0c0e14] to-darkBg">
+            
+            <!-- Top Header -->
+            <header class="h-20 flex items-center justify-between px-8 bg-darkBg/50 backdrop-blur-md border-b border-white/5 sticky top-0 z-40">
+                <div class="flex items-center gap-6 w-full max-w-2xl">
+                    <!-- Search Bar -->
+                    <div class="relative w-full">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+                        <input 
+                            type="text" 
+                            id="search-input"
+                            placeholder="Hledat tým, ligu nebo sport..." 
+                            class="bg-white/5 border border-white/10 rounded-2xl py-2.5 pl-11 pr-4 w-full text-sm focus:outline-none focus:ring-1 focus:ring-neonGreen/50 focus:border-neonGreen/50 transition-all"
+                            oninput="handleSearch(this.value)"
+                        >
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 ml-8">
+                    <div class="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                        <button class="px-4 py-1.5 rounded-lg text-[11px] font-extrabold bg-neonGreen text-black shadow-lg shadow-neonGreen/20">DNES</button>
+                        <button class="px-4 py-1.5 rounded-lg text-[11px] font-extrabold text-gray-500 hover:text-white transition-all uppercase">Zítra</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Tab Navigation -->
+            <div class="px-8 pt-8 flex items-center justify-between">
+                <div class="flex gap-10 border-b border-white/5 w-full">
+                    <button onclick="setTab('all')" id="tab-all" class="pb-4 text-sm font-bold border-b-2 border-neonGreen text-neonGreen transition-all">Všechny zápasy</button>
+                    <button onclick="setTab('live')" id="tab-live" class="pb-4 text-sm font-bold text-gray-500 hover:text-white transition-all flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 bg-neonGreen rounded-full live-dot"></span>
+                        Pouze ŽIVĚ
+                    </button>
+                    <button onclick="setTab('finished')" id="tab-finished" class="pb-4 text-sm font-bold text-gray-500 hover:text-white transition-all">Ukončené</button>
+                </div>
+            </div>
+
+            <!-- List Area -->
+            <div id="matches-container" class="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
+                <!-- Data injected via JS -->
+            </div>
+
+        </main>
+    </div>
+
+    <!-- JS LOGIC -->
+    <script>
+        // MOCK DATA
+        let matches = [
+            { id: 1, sport: 'fotbal', league: 'Česká Chance Liga', teamH: 'Sparta Praha', teamA: 'Slavia Praha', scoreH: 1, scoreA: 1, minute: 64, status: 'LIVE', isFavorite: true },
+            { id: 2, sport: 'fotbal', league: 'Premier League', teamH: 'Arsenal', teamA: 'Man City', scoreH: 0, scoreA: 2, minute: 82, status: 'LIVE', isFavorite: false },
+            { id: 3, sport: 'fotbal', league: 'Champions League', teamH: 'Real Madrid', teamA: 'Bayern Mnichov', scoreH: 0, scoreA: 0, minute: 0, status: 'UPCOMING', isFavorite: false, startTime: '21:00' },
+            { id: 4, sport: 'hokej', league: 'Tipsport Extraliga', teamH: 'HC Oceláři Třinec', teamA: 'HC Dynamo Pardubice', scoreH: 3, scoreA: 2, minute: 58, status: 'LIVE', isFavorite: false },
+            { id: 5, sport: 'hokej', league: 'NHL', teamH: 'Boston Bruins', teamA: 'NY Rangers', scoreH: 4, scoreA: 1, minute: 0, status: 'FINISHED', isFavorite: false },
+            { id: 6, sport: 'tenis', league: 'ATP - Paříž', teamH: 'Lehečka J.', teamA: 'Sinner J.', scoreH: 0, scoreA: 1, minute: 45, status: 'LIVE', isFavorite: false },
+            { id: 7, sport: 'fotbal', league: 'Česká Chance Liga', teamH: 'Baník Ostrava', teamA: 'Viktoria Plzeň', scoreH: 0, scoreA: 0, minute: 0, status: 'FINISHED', isFavorite: false }
+        ];
+
+        let activeTab = 'all';
+        let activeSport = 'all';
+        let searchQuery = '';
+
+        // Goal notification tracker to prevent multi-flash
+        const goalFlash = {};
+
+        function renderMatches() {
+            const container = document.getElementById('matches-container');
+            container.innerHTML = '';
+
+            const filtered = matches.filter(m => {
+                const matchesTab = activeTab === 'all' || (activeTab === 'live' && m.status === 'LIVE') || (activeTab === 'finished' && m.status === 'FINISHED');
+                const matchesSport = activeSport === 'all' || m.sport === activeSport;
+                const matchesSearch = m.teamH.toLowerCase().includes(searchQuery.toLowerCase()) || m.teamA.toLowerCase().includes(searchQuery.toLowerCase()) || m.league.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesTab && matchesSport && matchesSearch;
+            });
+
+            // Grouping by league
+            const leagues = [...new Set(filtered.map(m => m.league))];
+
+            if (leagues.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-64 text-gray-600">
+                        <i class="fas fa-ghost text-4xl mb-4 opacity-20"></i>
+                        <p class="font-bold">Nenalezeny žádné zápasy</p>
+                    </div>
+                `;
+                return;
+            }
+
+            leagues.forEach(leagueName => {
+                const leagueMatches = filtered.filter(m => m.league === leagueName);
+                
+                let leagueHtml = `
+                    <div class="mb-8 league-group">
+                        <div class="flex items-center gap-3 mb-4 px-2">
+                            <i class="fas fa-trophy text-xs text-neonGreen opacity-50"></i>
+                            <h3 class="text-xs font-black uppercase tracking-widest text-gray-400">${leagueName}</h3>
+                        </div>
+                        <div class="space-y-2">
+                `;
+
+                leagueMatches.forEach(m => {
+                    const isLive = m.status === 'LIVE';
+                    const isGoal = goalFlash[m.id];
+                    
+                    leagueHtml += `
+                        <div class="match-row glass-panel p-4 rounded-2xl flex items-center justify-between border border-white/5 ${isGoal ? 'goal-scored' : ''}">
+                            <!-- Left: Status/Minute -->
+                            <div class="w-16 flex flex-col items-center border-r border-white/5 mr-4">
+                                ${m.status === 'LIVE' ? `
+                                    <span class="text-neonGreen text-[11px] font-black">${m.minute}'</span>
+                                    <span class="text-[9px] text-neonGreen/60 font-bold uppercase tracking-tighter">Živě</span>
+                                ` : m.status === 'FINISHED' ? `
+                                    <span class="text-gray-500 text-[11px] font-bold uppercase">Finále</span>
+                                ` : `
+                                    <span class="text-white text-[11px] font-bold">${m.startTime}</span>
+                                `}
+                            </div>
+
+                            <!-- Center: Teams -->
+                            <div class="flex-1 grid grid-cols-3 items-center">
+                                <div class="text-right pr-6">
+                                    <span class="text-sm font-bold tracking-tight">${m.teamH}</span>
+                                </div>
+                                
+                                <div class="flex flex-col items-center justify-center">
+                                    <div class="bg-black/40 px-4 py-1.5 rounded-xl border border-white/10 flex items-center gap-4">
+                                        <span class="text-lg font-black ${m.scoreH > m.scoreA && m.status === 'FINISHED' ? 'text-neonGreen' : 'text-white'}">
+                                            ${m.status === 'UPCOMING' ? '-' : m.scoreH}
+                                        </span>
+                                        <span class="text-[10px] font-bold text-gray-600 tracking-widest">VS</span>
+                                        <span class="text-lg font-black ${m.scoreA > m.scoreH && m.status === 'FINISHED' ? 'text-neonGreen' : 'text-white'}">
+                                            ${m.status === 'UPCOMING' ? '-' : m.scoreA}
+                                        </span>
+                                    </div>
+                                    ${isGoal ? '<span class="text-[10px] font-black text-neonGreen mt-1 animate-bounce">GÓL!</span>' : ''}
+                                </div>
+
+                                <div class="text-left pl-6">
+                                    <span class="text-sm font-bold tracking-tight">${m.teamA}</span>
+                                </div>
+                            </div>
+
+                            <!-- Right: Actions -->
+                            <div class="flex items-center gap-4 ml-4">
+                                <button onclick="toggleFav(${m.id})" class="text-sm transition-colors hover:text-neonGreen ${m.isFavorite ? 'text-neonGreen' : 'text-gray-700'}">
+                                    <i class="${m.isFavorite ? 'fas' : 'far'} fa-star"></i>
+                                </button>
+                                <i class="fas fa-chevron-right text-[10px] text-gray-800"></i>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                leagueHtml += `</div></div>`;
+                container.innerHTML += leagueHtml;
+            });
+        }
+
+        // FILTERING FUNCTIONS
+        function setTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll('[id^="tab-"]').forEach(el => {
+                el.classList.remove('border-b-2', 'border-neonGreen', 'text-neonGreen');
+                el.classList.add('text-gray-500');
+            });
+            const activeEl = document.getElementById(`tab-${tab}`);
+            activeEl.classList.add('border-b-2', 'border-neonGreen', 'text-neonGreen');
+            activeEl.classList.remove('text-gray-500');
+            renderMatches();
+        }
+
+        function setSport(sport) {
+            activeSport = sport;
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active', 'text-neonGreen'));
+            const activeEl = document.getElementById(`btn-${sport}`);
+            activeEl.classList.add('active');
+            renderMatches();
+        }
+
+        function handleSearch(val) {
+            searchQuery = val;
+            renderMatches();
+        }
+
+        function toggleFav(id) {
+            const match = matches.find(m => m.id === id);
+            if (match) match.isFavorite = !match.isFavorite;
+            renderMatches();
+        }
+
+        // SIMULATION ENGINE
+        function initSimulator() {
+            // Clock Ticker
+            setInterval(() => {
+                matches.forEach(m => {
+                    if (m.status === 'LIVE' && m.minute < 90) {
+                        m.minute++;
+                    }
+                });
+                renderMatches();
+            }, 8000); // Každých 8 vteřin se pohne minuta
+
+            // Goal Trigger
+            setInterval(() => {
+                const liveMatches = matches.filter(m => m.status === 'LIVE');
+                if (liveMatches.length > 0) {
+                    const luckyMatch = liveMatches[Math.floor(Math.random() * liveMatches.length)];
+                    const isHome = Math.random() > 0.5;
+                    
+                    if (isHome) luckyMatch.scoreH++;
+                    else luckyMatch.scoreA++;
+
+                    // Trigger Flash
+                    goalFlash[luckyMatch.id] = true;
+                    renderMatches();
+
+                    // Remove Flash after 4s
+                    setTimeout(() => {
+                        delete goalFlash[luckyMatch.id];
+                        renderMatches();
+                    }, 4000);
+                }
+            }, 20000); // Každých 20 vteřin náhodný gól
+        }
+
+        // Init
+        window.onload = () => {
+            renderMatches();
+            initSimulator();
+        };
+    </script>
+</body>
+</html>
