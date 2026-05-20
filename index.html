@@ -1,521 +1,825 @@
-<!DOCTYPE html>
-<html lang="cs" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InstaScore - Reálné sportovní výsledky</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Plus Jakarta Sans -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+export type SportType = 'Fotbal' | 'Hokej' | 'Tenis' | string;
 
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            bg: '#08090c',
-                            card: '#12141c',
-                            border: '#1f2231',
-                            neon: '#00ff66',
-                            neonDim: 'rgba(0, 255, 102, 0.15)',
-                            accent: '#3b82f6'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+export type MatchStatus = 'Plánováno' | 'ŽIVĚ' | 'Poločas' | 'Konec';
 
-    <style>
-        body {
-            background-color: #08090c;
-            color: #f1f5f9;
-        }
-        /* Neonový pulzující efekt pro živé zápasy */
-        @keyframes pulse-neon {
-            0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 0 0 0 rgba(0, 255, 102, 0.7);
-            }
-            50% {
-                transform: scale(1.1);
-                box-shadow: 0 0 12px 4px rgba(0, 255, 102, 0.3);
-            }
-        }
-        .live-pulse {
-            animation: pulse-neon 2s infinite;
-        }
-        /* Efekt skla (Glassmorphism) */
-        .glass {
-            background: rgba(18, 20, 28, 0.75);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.03);
-        }
-        /* Skrytí scrollbaru */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-    </style>
-</head>
-<body class="font-sans antialiased overflow-x-hidden min-h-screen flex">
+export interface Match {
+  id: string;
+  homeTeam: string;
+  awayTeam: string;
+  sportType: SportType;
+  leagueName: string;
+  startTime: string; // např. "Dnes, 19:30"
+  status: MatchStatus;
+  homeScore: number;
+  awayScore: number;
+  detailText?: string; // např. "78' min" nebo "Sety"
+  homeLogoColor?: string; // Třída pro pozadí loga domácích
+  awayLogoColor?: string; // Třída pro pozadí loga hostů
+}
 
-    <!-- LEVÝ PANEL (SIDEBAR) -->
-    <aside class="w-64 border-r border-brand-border hidden md:flex flex-col h-screen sticky top-0 bg-brand-bg/95 backdrop-blur-md z-30 p-5">
-        <!-- Logo -->
-        <div class="flex items-center gap-3 px-2 py-4 mb-6">
-            <div class="h-10 w-10 rounded-xl bg-brand-neon/10 border border-brand-neon/30 flex items-center justify-center">
-                <i class="fa-solid fa-bolt text-brand-neon text-xl"></i>
+export type ViewFilter = 'Všechny zápasy' | 'Pouze ŽIVĚ' | 'Ukončené';
+
+import { Match } from './types';
+
+export const INITIAL_MATCHES: Match[] = [
+  {
+    id: 'match-1',
+    homeTeam: 'AC Sparta Praha',
+    awayTeam: 'SK Slavia Praha',
+    sportType: 'Fotbal',
+    leagueName: '1. Česká liga',
+    startTime: 'Dnes, 18:00',
+    status: 'ŽIVĚ',
+    homeScore: 2,
+    awayScore: 1,
+    detailText: "78' min",
+    homeLogoColor: 'bg-amber-800',
+    awayLogoColor: 'bg-red-700'
+  },
+  {
+    id: 'match-2',
+    homeTeam: 'HC Sparta Praha',
+    awayTeam: 'HC Oceláři Třinec',
+    sportType: 'Hokej',
+    leagueName: 'Tipsport Extraliga',
+    startTime: 'Dnes, 17:30',
+    status: 'Poločas',
+    homeScore: 3,
+    awayScore: 3,
+    detailText: 'Po 2. třetině',
+    homeLogoColor: 'bg-red-900',
+    awayLogoColor: 'bg-red-600'
+  },
+  {
+    id: 'match-3',
+    homeTeam: 'Jiří Lehečka',
+    awayTeam: 'Tomáš Macháč',
+    sportType: 'Tenis',
+    leagueName: 'ATP Madrid - Semifinále',
+    startTime: 'Dnes, 15:45',
+    status: 'Konec',
+    homeScore: 2,
+    awayScore: 1,
+    detailText: '6-4, 3-6, 7-5',
+    homeLogoColor: 'bg-sky-600',
+    awayLogoColor: 'bg-teal-600'
+  },
+  {
+    id: 'match-4',
+    homeTeam: 'FC Viktoria Plzeň',
+    awayTeam: 'FC Baník Ostrava',
+    sportType: 'Fotbal',
+    leagueName: '1. Česká liga',
+    startTime: 'Dnes, 20:30',
+    status: 'Plánováno',
+    homeScore: 0,
+    awayScore: 0,
+    detailText: 'Začíná v 20:30',
+    homeLogoColor: 'bg-blue-800',
+    awayLogoColor: 'bg-blue-600'
+  }
+];
+
+import React, { useState } from 'react';
+import { X, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
+
+interface LoginModalProps {
+  onClose: () => void;
+  onLoginSuccess: () => void;
+}
+
+export default function LoginModal({ onClose, onLoginSuccess }: LoginModalProps) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    
+    if (!username.trim() || !password.trim()) {
+      setErrorMsg('Nevyplnili jste uživatelské jméno nebo heslo.');
+      return;
+    }
+
+    setLoading(true);
+
+    setTimeout(() => {
+      setLoading(false);
+      if (username.trim() === 'admin' && password === 'admin123') {
+        onLoginSuccess();
+      } else {
+        setErrorMsg('Nesprávné přihlašovací údaje! Použijte admin / admin123.');
+      }
+    }, 600);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in" id="login-modal-overlay">
+      <div 
+        className="relative w-full max-w-md bg-sport-dark-card border border-sport-dark-border rounded-2xl p-6 shadow-2xl transition-all duration-300 ring-1 ring-neon-green/20"
+        id="login-modal-content"
+      >
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-12 bg-neon-green/20 rounded-full blur-2xl pointer-events-none"></div>
+
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1.5 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition"
+          aria-label="Zavřít"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="text-center mb-6 mt-2">
+          <div className="inline-flex items-center justify-center p-3 bg-neon-green/10 text-neon-green rounded-2xl mb-3 glow-green">
+            <Lock className="w-6 h-6 stroke-[2]" />
+          </div>
+          <h2 className="font-display text-2xl font-bold text-white uppercase tracking-tight">Přihlášení Správce</h2>
+          <p className="text-xs text-slate-400 mt-1">Zadejte přihlašovací údaje administrátora panelu</p>
+        </div>
+
+        {errorMsg && (
+          <div className="mb-4 p-3.5 bg-red-950/40 border border-red-800/40 text-red-200 text-xs rounded-xl flex items-start gap-2.5" id="login-error-alert">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+            <span className="leading-relaxed">{errorMsg}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4" id="login-form">
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Uživatelské jméno</label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                <User className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Např. admin"
+                className="w-full bg-sport-dark-bg border border-sport-dark-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-neon-green transition"
+                id="login-username-input"
+                autoComplete="username"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Heslo</label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                <Lock className="w-4 h-4" />
+              </span>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Zadejte heslo"
+                className="w-full bg-sport-dark-bg border border-sport-dark-border rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-neon-green transition font-mono"
+                id="login-password-input"
+                autoComplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-300 transition"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-slate-800/30 border border-slate-700/20 rounded-xl p-3 text-[11px] text-slate-400 leading-normal">
+            <span className="font-semibold text-slate-300">Testovací přístup:</span><br />
+            Jméno: <code className="text-neon-green font-semibold">admin</code> | Heslo: <code className="text-neon-green font-semibold">admin123</code>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-neon-green text-black hover:bg-emerald-400 font-display font-semibold rounded-xl text-center shadow-lg transition duration-300 text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            id="login-submit-btn"
+          >
+            {loading ? (
+              <span className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              <span>PŘIHLÁSIT SE</span>
+            )}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+                    import React from 'react';
+import { Match } from '../types';
+import { Clock, Tv, Trophy, Calendar, Sparkles } from 'lucide-react';
+
+interface MatchDisplayProps {
+  match: Match;
+  isAdmin?: boolean;
+  key?: string;
+}
+
+export default function MatchDisplay({ match }: MatchDisplayProps): React.JSX.Element {
+  const getStatusBadge = () => {
+    switch (match.status) {
+      case 'ŽIVĚ':
+        return (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-950/80 border border-red-500/40 text-red-500 rounded-full text-[10px] font-bold tracking-widest uppercase animate-pulse">
+            <span className="w-1.5 h-1.5 bg-red-500 rounded-full glow-green animate-ping"></span>
+            <span>ŽIVĚ</span>
+          </div>
+        );
+      case 'Poločas':
+        return (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-neon-blue/10 border border-neon-blue/30 text-neon-blue rounded-full text-[10px] font-bold tracking-widest uppercase">
+            <span>POLOČAS</span>
+          </div>
+        );
+      case 'Konec':
+        return (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 text-slate-400 border border-slate-700/50 rounded-full text-[10px] font-semibold tracking-widest uppercase">
+            <span>UKONČENO</span>
+          </div>
+        );
+      case 'Plánováno':
+      default:
+        return (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800/60 text-slate-300 border border-slate-700/30 rounded-full text-[10px] font-medium tracking-wide uppercase">
+            <Clock className="w-3 h-3 text-slate-400" />
+            <span>{match.startTime || 'PLÁNOVÁNO'}</span>
+          </div>
+        );
+    }
+  };
+
+  const getAbbreviation = (team: string) => {
+    if (!team) return '';
+    const words = team.split(/\s+/);
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return team.substring(0, 3).toUpperCase();
+  };
+
+  const isLive = match.status === 'ŽIVĚ' || match.status === 'Poločas';
+
+  return (
+    <div 
+      className={`relative bg-sport-dark-card border rounded-2xl p-5 hover:translate-y-[-2px] transition-all duration-300 overflow-hidden group ${
+        isLive 
+          ? 'border-neon-green/30 inset-shadow-neon shadow-lg shadow-neon-green/5' 
+          : 'border-sport-dark-border hover:border-slate-800'
+      }`}
+      id={`match-display-card-${match.id}`}
+    >
+      {isLive && (
+        <div className="absolute top-0 right-0 w-24 h-24 bg-neon-green/5 rounded-full blur-2xl pointer-events-none"></div>
+      )}
+
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-900 px-2 py-0.5 rounded tracking-wider border border-slate-800">
+            {match.sportType}
+          </span>
+          <span className="text-xs text-slate-400 font-medium truncate max-w-[150px] md:max-w-[200px]" title={match.leagueName}>
+            {match.leagueName}
+          </span>
+        </div>
+        
+        <div>{getStatusBadge()}</div>
+      </div>
+
+      <div className="grid grid-cols-12 items-center gap-2 mb-3">
+        <div className="col-span-4 flex flex-col items-center text-center">
+          <div className="relative mb-2 shrink-0">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-display font-bold text-sm tracking-tighter ${match.homeLogoColor || 'bg-indigo-600'} shadow-md border border-white/10 relative overflow-hidden group-hover:scale-105 transition duration-300`}>
+              <div className="absolute inset-0 bg-gradient-to-tr from-black/40 to-transparent"></div>
+              <span className="relative z-10">{getAbbreviation(match.homeTeam)}</span>
+            </div>
+          </div>
+          <span className="text-sm font-semibold text-white tracking-tight line-clamp-2 min-h-[40px] px-1 flex items-center justify-center">
+            {match.homeTeam}
+          </span>
+        </div>
+
+        <div className="col-span-4 flex flex-col items-center justify-center">
+          {match.status === 'Plánováno' ? (
+            <div className="flex flex-col items-center justify-center py-2">
+              <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mb-1">Zahájení</span>
+              <span className="text-xs text-neon-blue font-mono font-bold bg-neon-blue/10 border border-neon-blue/20 rounded-lg px-2 py-0.5">
+                {match.startTime.split(',')[1]?.trim() || match.startTime}
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-3">
+                <span className={`font-mono text-3xl font-extrabold tracking-widest ${isLive ? 'text-neon-green text-glow-green animate-pulse' : 'text-slate-300'}`}>
+                  {match.homeScore}
+                </span>
+                <span className="font-mono text-slate-600 text-lg font-bold">:</span>
+                <span className={`font-mono text-3xl font-extrabold tracking-widest ${isLive ? 'text-neon-green text-glow-green animate-pulse' : 'text-slate-300'}`}>
+                  {match.awayScore}
+                </span>
+              </div>
+              
+              {match.detailText && (
+                <span className={`mt-2 font-mono text-[10px] px-2 py-0.5 rounded-full ${
+                  isLive ? 'text-neon-green bg-neon-green/15 font-semibold border border-neon-green/20' : 'text-slate-500 bg-slate-900 border border-slate-800'
+                }`}>
+                  {match.detailText}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="col-span-4 flex flex-col items-center text-center">
+          <div className="relative mb-2 shrink-0">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-display font-bold text-sm tracking-tighter ${match.awayLogoColor || 'bg-red-700'} shadow-md border border-white/10 relative overflow-hidden group-hover:scale-105 transition duration-300`}>
+              <div className="absolute inset-0 bg-gradient-to-tr from-black/40 to-transparent"></div>
+              <span className="relative z-10">{getAbbreviation(match.awayTeam)}</span>
+            </div>
+          </div>
+          <span className="text-sm font-semibold text-white tracking-tight line-clamp-2 min-h-[40px] px-1 flex items-center justify-center">
+            {match.awayTeam}
+          </span>
+        </div>
+      </div>
+
+      <div className="border-t border-sport-dark-border/40 pt-2.5 mt-2 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+        <div className="flex items-center gap-1.5">
+          <Trophy className="w-3.5 h-3.5 text-slate-600 group-hover:text-amber-500 transition-colors" />
+          <span className="text-slate-400 group-hover:text-slate-300 truncate max-w-[120px]">{match.leagueName}</span>
+        </div>
+        <span>ID: {match.id.replace('match-', '')}</span>
+      </div>
+    </div>
+  );
+}
+
+                    import React, { useState } from 'react';
+import { Match, MatchStatus, SportType } from '../types';
+import { 
+  Plus, 
+  Minus, 
+  Trash2, 
+  LogOut, 
+  PlusCircle, 
+  Calendar, 
+  Check, 
+  AlertCircle,
+  FileEdit
+} from 'lucide-react';
+
+interface AdminPanelProps {
+  matches: Match[];
+  onAddMatch: (match: Omit<Match, 'id'>) => void;
+  onUpdateScore: (id: string, team: 'home' | 'away', change: number) => void;
+  onUpdateStatus: (id: string, status: MatchStatus) => void;
+  onUpdateDetail: (id: string, detailText: string) => void;
+  onDeleteMatch: (id: string) => void;
+  onLogout: () => void;
+}
+
+const LOGO_COLORS = [
+  { value: 'bg-amber-800', name: 'Sparta Maronová' },
+  { value: 'bg-red-700', name: 'Základní Červená' },
+  { value: 'bg-blue-800', name: 'Viktoria Plzeň Modrá' },
+  { value: 'bg-indigo-600', name: 'Královská Modrá' },
+  { value: 'bg-teal-600', name: 'Teal/Smaragd' },
+  { value: 'bg-sky-600', name: 'Světle Modrá' },
+  { value: 'bg-green-600', name: 'Zelená' },
+  { value: 'bg-amber-500', name: 'Žlutá' },
+  { value: 'bg-purple-700', name: 'Fialová' },
+  { value: 'bg-slate-700', name: 'Břidlicová Šedá' }
+];
+
+export default function AdminPanel({
+  matches,
+  onAddMatch,
+  onUpdateScore,
+  onUpdateStatus,
+  onUpdateDetail,
+  onDeleteMatch,
+  onLogout,
+}: AdminPanelProps) {
+  const [homeTeam, setHomeTeam] = useState('');
+  const [awayTeam, setAwayTeam] = useState('');
+  const [sportType, setSportType] = useState<SportType>('Fotbal');
+  const [customSport, setCustomSport] = useState('');
+  const [leagueName, setLeagueName] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [detailText, setDetailText] = useState('');
+  const [status, setStatus] = useState<MatchStatus>('Plánováno');
+  const [homeLogoColor, setHomeLogoColor] = useState('bg-indigo-600');
+  const [awayLogoColor, setAwayLogoColor] = useState('bg-red-700');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
+  const [tempDetailText, setTempDetailText] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!homeTeam.trim() || !awayTeam.trim() || !leagueName.trim() || !startTime.trim()) {
+      setErrorMsg('Prosím vyplňte všechny povinné údaje (Týmy, Ligu a Čas zahájení).');
+      setTimeout(() => setErrorMsg(''), 4000);
+      return;
+    }
+
+    const finalSport = sportType === 'Custom' ? (customSport.trim() || 'Jiný') : sportType;
+
+    onAddMatch({
+      homeTeam: homeTeam.trim(),
+      awayTeam: awayTeam.trim(),
+      sportType: finalSport,
+      leagueName: leagueName.trim(),
+      startTime: startTime.trim(),
+      status,
+      homeScore: 0,
+      awayScore: 0,
+      detailText: detailText.trim() || (status === 'Plánováno' ? `Začátek: ${startTime}` : status === 'ŽIVĚ' ? "1' min" : ''),
+      homeLogoColor,
+      awayLogoColor
+    });
+
+    setHomeTeam('');
+    setAwayTeam('');
+    if (sportType === 'Custom') {
+      setCustomSport('');
+    }
+    setLeagueName('');
+    setStartTime('');
+    setDetailText('');
+    setStatus('Plánováno');
+    
+    setSuccessMsg('Zápas byl úspěšně přidán do systému!');
+    setTimeout(() => setSuccessMsg(''), 4000);
+  };
+
+  const handleStartEditingDetail = (match: Match) => {
+    setEditingDetailId(match.id);
+    setTempDetailText(match.detailText || '');
+  };
+
+  const handleSaveDetail = (id: string) => {
+    onUpdateDetail(id, tempDetailText);
+    setEditingDetailId(null);
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 font-sans" id="admin-panel-container">
+      <div className="lg:col-span-5 bg-sport-dark-card border border-sport-dark-border rounded-2xl p-6 shadow-2xl relative overflow-hidden" id="admin-add-match-card">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-neon-green/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="flex items-center justify-between border-b border-sport-dark-border pb-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-neon-green/10 text-neon-green rounded-xl">
+              <PlusCircle className="w-6 h-6" />
             </div>
             <div>
-                <span class="text-2xl font-extrabold tracking-wider bg-gradient-to-r from-white via-slate-100 to-brand-neon bg-clip-text text-transparent">Insta<span class="text-brand-neon">Score</span></span>
-                <p class="text-[10px] text-gray-500 font-medium tracking-widest uppercase">Live sports data</p>
+              <h2 className="font-display text-xl font-bold text-white uppercase tracking-tight">Nový Zápas</h2>
+              <p className="text-xs text-slate-400">Přidat sportovní utkání do systému</p>
             </div>
+          </div>
+          <button 
+            type="button"
+            onClick={onLogout}
+            className="flex items-center gap-2 px-3 py-1.5 bg-red-950/40 hover:bg-red-900/60 border border-red-800/40 hover:border-red-600/60 text-red-400 hover:text-white rounded-lg text-xs transition duration-200"
+            id="admin-logout-btn"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Odhlásit</span>
+          </button>
         </div>
 
-        <!-- Seznam Sportů -->
-        <div class="flex flex-col gap-1">
-            <p class="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-3 mb-2">Sporty</p>
-            
-            <button onclick="switchSport('football')" id="btn-sport-football" class="flex items-center justify-between px-3 py-3 rounded-xl bg-brand-neon/10 text-brand-neon font-semibold transition-all duration-200">
-                <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-soccer-ball text-lg"></i>
-                    <span>Fotbal</span>
-                </div>
-                <span class="text-xs bg-brand-neon/20 px-2 py-0.5 rounded-full" id="football-count">0</span>
-            </button>
+        {errorMsg && (
+          <div className="mb-4 p-3 bg-red-950/40 border border-red-800/40 text-red-200 text-sm rounded-xl flex items-center gap-2" id="form-error-alert">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
 
-            <button onclick="switchSport('hockey')" id="btn-sport-hockey" class="flex items-center justify-between px-3 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 font-semibold transition-all duration-200 mt-1">
-                <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-hockey-puck text-lg"></i>
-                    <span>Hokej</span>
-                </div>
-                <span class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">Demo</span>
-            </button>
+        {successMsg && (
+          <div className="mb-4 p-3 bg-neon-green/10 border border-neon-green/20 text-neon-green text-sm rounded-xl flex items-center gap-2" id="form-success-alert">
+            <Check className="w-4 h-4 text-neon-green shrink-0 glow-green" />
+            <span>{successMsg}</span>
+          </div>
+        )}
 
-            <button onclick="switchSport('tennis')" id="btn-sport-tennis" class="flex items-center justify-between px-3 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 font-semibold transition-all duration-200 mt-1">
-                <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-baseball-bat-ball text-lg"></i>
-                    <span>Tenis</span>
-                </div>
-                <span class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">Demo</span>
-            </button>
-        </div>
-
-        <!-- Informační box o API -->
-        <div class="mt-auto p-4 rounded-2xl bg-gradient-to-b from-brand-card to-brand-bg border border-brand-border text-center">
-            <div class="h-8 w-8 rounded-full bg-brand-neon/20 flex items-center justify-center mx-auto mb-3">
-                <i class="fa-solid fa-wifi text-brand-neon text-sm"></i>
-            </div>
-            <h4 class="text-sm font-bold text-white mb-1">Živé API aktivní</h4>
-            <p class="text-xs text-gray-400">Právě stahujeme skutečná data z football-data.org.</p>
-        </div>
-    </aside>
-
-    <!-- HLAVNÍ OBSAH -->
-    <main class="flex-grow flex flex-col min-h-screen">
-        <!-- TOP PANEL (HEADER) -->
-        <header class="h-20 border-b border-brand-border bg-brand-bg/80 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between px-4 md:px-8">
-            <!-- Vyhledávač -->
-            <div class="relative w-full max-w-md">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </span>
-                <input type="text" id="search-input" oninput="filterMatches()" class="w-full bg-brand-card border border-brand-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-neon/50 focus:ring-1 focus:ring-brand-neon/30 transition-all duration-200" placeholder="Vyhledat tým nebo ligu...">
-            </div>
-
-            <!-- Uživatelský stav & Refresh -->
-            <div class="flex items-center gap-4">
-                <button onclick="loadRealFootballData()" class="p-2.5 rounded-xl bg-brand-card border border-brand-border hover:bg-white/5 transition-all text-gray-300 hover:text-brand-neon" title="Aktualizovat data">
-                    <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i>
+        <form onSubmit={handleSubmit} className="space-y-5" id="add-match-form">
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">Sport</label>
+            <div className="grid grid-cols-4 gap-2">
+              {['Fotbal', 'Hokej', 'Tenis', 'Custom'].map((sport) => (
+                <button
+                  key={sport}
+                  type="button"
+                  onClick={() => setSportType(sport)}
+                  className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all duration-200 uppercase tracking-wider ${
+                    sportType === sport
+                      ? 'bg-neon-green/10 border-neon-green text-neon-green glow-green'
+                      : 'bg-sport-dark-bg border-sport-dark-border text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  {sport === 'Custom' ? 'Jiný' : sport}
                 </button>
-                <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-brand-neon/10 border border-brand-neon/20">
-                    <div class="h-2 w-2 rounded-full bg-brand-neon live-pulse"></div>
-                    <span class="text-xs font-semibold text-brand-neon">Reálná data</span>
+              ))}
+            </div>
+
+            {sportType === 'Custom' && (
+              <input
+                type="text"
+                placeholder="Zadejte název sportu..."
+                value={customSport}
+                onChange={(e) => setCustomSport(e.target.value)}
+                className="mt-2 w-full bg-sport-dark-bg border border-sport-dark-border rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-neon-green"
+              />
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Soutěž / Liga *</label>
+            <input
+              type="text"
+              placeholder="Např. 1. Česká liga, Champions league..."
+              value={leagueName}
+              onChange={(e) => setLeagueName(e.target.value)}
+              className="w-full bg-sport-dark-bg border border-sport-dark-border rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-neon-green"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Domácí Tým *</label>
+              <input
+                type="text"
+                placeholder="Domácí tým"
+                value={homeTeam}
+                onChange={(e) => setHomeTeam(e.target.value)}
+                className="w-full bg-sport-dark-bg border border-sport-dark-border rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500"
+                required
+              />
+              
+              <div className="mt-2">
+                <span className="text-[10px] text-slate-500 block mb-1">Dres</span>
+                <div className="flex flex-wrap gap-1">
+                  {LOGO_COLORS.slice(0, 5).map((color) => (
+                    <button
+                      key={`home-${color.value}`}
+                      type="button"
+                      onClick={() => setHomeLogoColor(color.value)}
+                      title={color.name}
+                      className={`w-4 h-4 rounded-full ${color.value} border transition ${
+                        homeLogoColor === color.value ? 'ring-2 ring-neon-green scale-110' : 'border-transparent'
+                      }`}
+                    ></button>
+                  ))}
                 </div>
+              </div>
             </div>
-        </header>
 
-        <!-- OBSAHOVÁ ZÓNA -->
-        <div class="p-4 md:p-8 flex-grow max-w-6xl w-full mx-auto">
-            <!-- TLAČÍTKA FILTRU -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                <div class="flex gap-2 p-1 bg-brand-card/80 border border-brand-border rounded-xl self-start glass">
-                    <button onclick="setStatusFilter('all')" id="btn-filter-all" class="px-4 py-2 rounded-lg text-sm font-bold bg-brand-neon text-brand-bg transition-all duration-200">
-                        Všechny zápasy
-                    </button>
-                    <button onclick="setStatusFilter('live')" id="btn-filter-live" class="px-4 py-2 rounded-lg text-sm font-bold text-gray-400 hover:text-white transition-all duration-200">
-                        Pouze ŽIVĚ
-                    </button>
-                    <button onclick="setStatusFilter('finished')" id="btn-filter-finished" class="px-4 py-2 rounded-lg text-sm font-bold text-gray-400 hover:text-white transition-all duration-200">
-                        Ukončené
-                    </button>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Hosté *</label>
+              <input
+                type="text"
+                placeholder="Hostující tým"
+                value={awayTeam}
+                onChange={(e) => setAwayTeam(e.target.value)}
+                className="w-full bg-sport-dark-bg border border-sport-dark-border rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500"
+                required
+              />
+
+              <div className="mt-2">
+                <span className="text-[10px] text-slate-500 block mb-1">Dres</span>
+                <div className="flex flex-wrap gap-1">
+                  {LOGO_COLORS.slice(5, 10).map((color) => (
+                    <button
+                      key={`away-${color.value}`}
+                      type="button"
+                      onClick={() => setAwayLogoColor(color.value)}
+                      title={color.name}
+                      className={`w-4 h-4 rounded-full ${color.value} border transition ${
+                        awayLogoColor === color.value ? 'ring-2 ring-neon-green scale-110' : 'border-transparent'
+                      }`}
+                    ></button>
+                  ))}
                 </div>
-                
-                <span class="text-xs text-gray-500 font-medium" id="update-timestamp">Poslední aktualizace: --:--:--</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Zahájení *</label>
+              <input
+                type="text"
+                placeholder="Dnes, 19:30"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-full bg-sport-dark-bg border border-sport-dark-border rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500"
+                required
+              />
             </div>
 
-            <!-- INDIKÁTOR NABÍHÁNÍ (LOADING) -->
-            <div id="loading-state" class="hidden flex-col items-center justify-center py-20">
-                <div class="h-12 w-12 border-4 border-brand-neon/20 border-t-brand-neon rounded-full animate-spin mb-4"></div>
-                <p class="text-gray-400 text-sm">Načítám aktuální data ze sportovních stadionů...</p>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Stav</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as MatchStatus)}
+                className="w-full bg-sport-dark-bg border border-sport-dark-border rounded-xl px-3 py-2.5 text-sm text-white"
+              >
+                <option value="Plánováno">Plánováno</option>
+                <option value="ŽIVĚ">ŽIVĚ</option>
+                <option value="Poločas">Poločas</option>
+                <option value="Konec">Konec</option>
+              </select>
             </div>
+          </div>
 
-            <!-- CHYBOVÝ STAV -->
-            <div id="error-state" class="hidden max-w-xl mx-auto p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-center my-10">
-                <i class="fa-solid fa-triangle-exclamation text-red-500 text-3xl mb-3"></i>
-                <h3 class="text-lg font-bold text-white mb-1">Chyba při stahování dat</h3>
-                <p class="text-sm text-gray-400 mb-4" id="error-message">Nepodařilo se připojit k datovému serveru.</p>
-                <button onclick="loadRealFootballData()" class="px-4 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-all">
-                    Zkusit znovu
-                </button>
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Detaily (Nepovinné)</label>
+            <input
+              type="text"
+              placeholder="Např. 45' min, Set 1"
+              value={detailText}
+              onChange={(e) => setDetailText(e.target.value)}
+              className="w-full bg-sport-dark-bg border border-sport-dark-border rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500"
+            />
+          </div>
 
-            <!-- KONTENÉR PRO ZÁPASY -->
-            <div id="matches-container" class="space-y-6">
-                <!-- Data se vygenerují přes JS -->
-            </div>
+          <button
+            type="submit"
+            className="w-full py-3 bg-neon-green text-black hover:bg-emerald-400 font-display font-semibold rounded-xl text-center shadow-lg transition duration-300 text-sm flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Plus className="w-5 h-5 stroke-[2.5]" />
+            <span>VYTVOŘIT UTKÁNÍ</span>
+          </button>
+        </form>
+      </div>
+
+      <div className="lg:col-span-7 bg-sport-dark-card border border-sport-dark-border rounded-2xl p-6 shadow-2xl" id="admin-matches-management-card">
+        <div className="flex items-center justify-between border-b border-sport-dark-border pb-4 mb-6">
+          <div>
+            <h2 className="font-display text-xl font-bold text-white uppercase tracking-tight">Správa Utkání</h2>
+            <p className="text-xs text-slate-400">Upravujte stavy a skóre v reálném čase</p>
+          </div>
+          <span className="px-3 py-1 bg-neon-green/10 text-neon-green rounded-xl font-mono text-xs font-bold">
+            {matches.length} zápasů
+          </span>
         </div>
-    </main>
 
-    <!-- JS LOGIKA -->
-    <script>
-        // TVŮJ API TOKEN DOSTAZENÝ ZADAVATELEM
-        const API_TOKEN = 'f2d2580030804accbe98bdbd14319a50';
-        
-        // Používáme bezplatnou CORS proxy, abychom obešli bezpečnostní omezení v prohlížeči
-        const PROXY_URL = 'https://corsproxy.io/?';
-        const API_URL = 'https://api.football-data.org/v4/matches';
+        {matches.length === 0 ? (
+          <div className="py-20 text-center border border-dashed border-sport-dark-border rounded-2xl">
+            <Calendar className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+            <p className="text-slate-400 font-medium">Nejsou vytvořeny žádné zápasy.</p>
+          </div>
+        ) : (
+          <div className="space-y-4 max-h-[640px] overflow-y-auto pr-1" id="admin-matches-list">
+            {matches.map((match) => (
+              <div 
+                key={match.id}
+                className="bg-sport-dark-bg border border-sport-dark-border rounded-xl p-4 transition-all hover:border-slate-700"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded text-[10px] font-bold uppercase">
+                      {match.sportType}
+                    </span>
+                    <span className="text-xs text-slate-400">{match.leagueName}</span>
+                  </div>
 
-        let allMatches = []; // Sem se stáhnou data z API
-        let currentSport = 'football'; // Výchozí vybraný sport
-        let currentStatusFilter = 'all'; // all | live | finished
-        let searchQuery = '';
-
-        // Pomocná mock data pro Hokej a Tenis (Demo režim, když API dává jen Fotbal)
-        const demoHockeyMatches = [
-            {
-                competition: { name: "Tipsport Extraliga (Česko)" },
-                homeTeam: { name: "HC Sparta Praha" },
-                awayTeam: { name: "HC Dynamo Pardubice" },
-                status: "IN_PLAY",
-                score: { fullTime: { home: 3, away: 2 } },
-                utcDate: new Date().toISOString()
-            },
-            {
-                competition: { name: "NHL" },
-                homeTeam: { name: "Boston Bruins" },
-                awayTeam: { name: "New York Rangers" },
-                status: "TIMED",
-                score: { fullTime: { home: null, away: null } },
-                utcDate: new Date(Date.now() + 7200000).toISOString()
-            }
-        ];
-
-        const demoTennisMatches = [
-            {
-                competition: { name: "Wimbledon - Muži" },
-                homeTeam: { name: "J. Sinner" },
-                awayTeam: { name: "C. Alcaraz" },
-                status: "IN_PLAY",
-                score: { fullTime: { home: 2, away: 1 } },
-                utcDate: new Date().toISOString()
-            }
-        ];
-
-        // Spuštění při načtení stránky
-        window.addEventListener('DOMContentLoaded', () => {
-            loadRealFootballData();
-        });
-
-        // Přepínání sportů v levém menu
-        function switchSport(sport) {
-            currentSport = sport;
-            
-            // Upravíme vzhled tlačítek sportů
-            document.querySelectorAll('[id^="btn-sport-"]').forEach(btn => {
-                btn.className = "flex items-center justify-between px-3 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 font-semibold transition-all duration-200 mt-1";
-            });
-            
-            const activeBtn = document.getElementById(`btn-sport-${sport}`);
-            if (activeBtn) {
-                activeBtn.className = "flex items-center justify-between px-3 py-3 rounded-xl bg-brand-neon/10 text-brand-neon font-semibold transition-all duration-200 mt-1";
-            }
-
-            if (sport === 'football') {
-                loadRealFootballData();
-            } else if (sport === 'hockey') {
-                renderMatches(demoHockeyMatches);
-            } else if (sport === 'tennis') {
-                renderMatches(demoTennisMatches);
-            }
-        }
-
-        // Přepínání stavových filtrů (Všechny, Živě, Konec)
-        function setStatusFilter(status) {
-            currentStatusFilter = status;
-            
-            document.querySelectorAll('[id^="btn-filter-"]').forEach(btn => {
-                btn.className = "px-4 py-2 rounded-lg text-sm font-bold text-gray-400 hover:text-white transition-all duration-200";
-            });
-
-            const activeBtn = document.getElementById(`btn-filter-${status}`);
-            if (activeBtn) {
-                activeBtn.className = "px-4 py-2 rounded-lg text-sm font-bold bg-brand-neon text-brand-bg transition-all duration-200";
-            }
-
-            if (currentSport === 'football') {
-                applyFiltersAndRender(allMatches);
-            } else if (currentSport === 'hockey') {
-                applyFiltersAndRender(demoHockeyMatches);
-            } else if (currentSport === 'tennis') {
-                applyFiltersAndRender(demoTennisMatches);
-            }
-        }
-
-        // Vyhledávání v reálném čase
-        function filterMatches() {
-            searchQuery = document.getElementById('search-input').value.toLowerCase();
-            if (currentSport === 'football') {
-                applyFiltersAndRender(allMatches);
-            } else if (currentSport === 'hockey') {
-                applyFiltersAndRender(demoHockeyMatches);
-            } else if (currentSport === 'tennis') {
-                applyFiltersAndRender(demoTennisMatches);
-            }
-        }
-
-        // HLAVNÍ FUNKCE: Stažení reálných fotbalových dat přes CORS proxy
-        async function loadRealFootballData() {
-            toggleUIState('loading');
-            const icon = document.getElementById('refresh-icon');
-            if (icon) icon.classList.add('animate-spin');
-
-            try {
-                // Sestavení URL adresy s CORS Proxy
-                const targetUrl = `${API_URL}`;
-                const proxyRequestUrl = `${PROXY_URL}${encodeURIComponent(targetUrl)}`;
-
-                const response = await fetch(proxyRequestUrl, {
-                    method: 'GET',
-                    headers: {
-                        'X-Auth-Token': API_TOKEN,
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Chyba serveru (${response.status}). Zkontroluj funkčnost API klíče.`);
-                }
-
-                const data = await response.json();
-                allMatches = data.matches || [];
-
-                // Aktualizace počtu fotbalových zápasů v sidebar menu
-                document.getElementById('football-count').textContent = allMatches.length;
-
-                // Nastavíme čas aktualizace
-                const now = new Date();
-                document.getElementById('update-timestamp').textContent = `Poslední aktualizace: ${now.toLocaleTimeString('cs-CZ')}`;
-
-                applyFiltersAndRender(allMatches);
-                toggleUIState('data');
-            } catch (err) {
-                console.error("Chyba při stahování API:", err);
-                document.getElementById('error-message').textContent = err.message || "Nepodařilo se navázat spojení se sportovním API.";
-                toggleUIState('error');
-            } finally {
-                if (icon) icon.classList.remove('animate-spin');
-            }
-        }
-
-        // Filtrování stažených dat před vykreslením
-        function applyFiltersAndRender(matchesList) {
-            let filtered = matchesList;
-
-            // 1. Stavový filtr (Live / Ukončené)
-            if (currentStatusFilter === 'live') {
-                filtered = filtered.filter(m => m.status === 'IN_PLAY' || m.status === 'LIVE' || m.status === 'PAUSED');
-            } else if (currentStatusFilter === 'finished') {
-                filtered = filtered.filter(m => m.status === 'FINISHED');
-            }
-
-            // 2. Vyhledávací filtr
-            if (searchQuery.trim() !== '') {
-                filtered = filtered.filter(m => 
-                    m.homeTeam.name.toLowerCase().includes(searchQuery) ||
-                    m.awayTeam.name.toLowerCase().includes(searchQuery) ||
-                    m.competition.name.toLowerCase().includes(searchQuery)
-                );
-            }
-
-            renderMatches(filtered);
-        }
-
-        // Vykreslení zápisů do HTML (Seskupeno podle ligy)
-        function renderMatches(matches) {
-            const container = document.getElementById('matches-container');
-            container.innerHTML = '';
-
-            if (!matches || matches.length === 0) {
-                container.innerHTML = `
-                    <div class="glass p-12 rounded-3xl border border-brand-border text-center">
-                        <i class="fa-regular fa-calendar text-gray-600 text-4xl mb-3"></i>
-                        <h4 class="text-lg font-bold text-white mb-1">Žádné zápasy nenalezeny</h4>
-                        <p class="text-sm text-gray-500">Zkus změnit filtry nebo vyhledávaný výraz.</p>
+                  {confirmDeleteId === match.id ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-red-400 animate-pulse font-medium">Smazat?</span>
+                      <button
+                        onClick={() => {
+                          onDeleteMatch(match.id);
+                          setConfirmDeleteId(null);
+                        }}
+                        className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-xs font-semibold"
+                      >
+                        Ano
+                      </button>
+                      <button onClick={() => setConfirmDeleteId(null)} className="px-2 py-1 bg-slate-800 text-slate-300 rounded text-xs">Ne</button>
                     </div>
-                `;
-                return;
-            }
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(match.id)}
+                      className="p-1.5 bg-red-950/20 hover:bg-red-900/40 text-red-400 rounded-lg transition"
+                      title="Smazat zápas"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
 
-            // Seskupení zápasů podle ligy
-            const grouped = {};
-            matches.forEach(match => {
-                const leagueName = match.competition.name;
-                if (!grouped[leagueName]) {
-                    grouped[leagueName] = [];
-                }
-                grouped[leagueName].push(match);
-            });
-
-            // Generování HTML pro každou ligu a její zápasy
-            for (const [league, leagueMatches] of Object.entries(grouped)) {
-                let leagueHTML = `
-                    <div class="glass rounded-3xl border border-brand-border/40 overflow-hidden">
-                        <!-- Hlavička Ligy -->
-                        <div class="px-6 py-4 bg-white/[0.02] border-b border-brand-border/40 flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="h-6 w-6 rounded bg-brand-neon/10 flex items-center justify-center text-brand-neon text-xs">
-                                    <i class="fa-solid fa-trophy"></i>
-                                </div>
-                                <h3 class="font-bold text-sm tracking-wide text-gray-200">${league}</h3>
-                            </div>
-                            <span class="text-[11px] text-gray-500 font-bold uppercase tracking-wider">${leagueMatches.length} zápasů</span>
-                        </div>
-                        
-                        <!-- List zápasů -->
-                        <div class="divide-y divide-brand-border/30">
-                `;
-
-                leagueMatches.forEach(match => {
-                    const homeScore = match.score.fullTime.home !== null ? match.score.fullTime.home : '-';
-                    const awayScore = match.score.fullTime.away !== null ? match.score.fullTime.away : '-';
-                    
-                    // Nastavení formátu stavu/času zápasu
-                    let statusBadge = '';
-                    let scoreClass = 'text-gray-400';
-
-                    if (match.status === 'IN_PLAY' || match.status === 'LIVE') {
-                        statusBadge = `
-                            <span class="flex items-center gap-1.5 px-2 py-1 rounded bg-brand-neon/10 border border-brand-neon/30 text-[10px] font-extrabold text-brand-neon tracking-wide">
-                                <span class="h-1.5 w-1.5 rounded-full bg-brand-neon live-pulse"></span>
-                                ŽIVĚ
-                            </span>
-                        `;
-                        scoreClass = 'text-brand-neon font-black';
-                    } else if (match.status === 'PAUSED') {
-                        statusBadge = `
-                            <span class="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-[10px] font-extrabold text-amber-400 tracking-wide">
-                                POLOČAS
-                            </span>
-                        `;
-                        scoreClass = 'text-amber-400 font-bold';
-                    } else if (match.status === 'FINISHED') {
-                        statusBadge = `<span class="text-xs font-semibold text-gray-500">Konec</span>`;
-                        scoreClass = 'text-white font-extrabold';
-                    } else {
-                        // Plánovaný zápas - převedeme UTC čas na lokální formát HH:MM
-                        const matchDate = new Date(match.utcDate);
-                        const hours = String(matchDate.getHours()).padStart(2, '0');
-                        const mins = String(matchDate.getMinutes()).padStart(2, '0');
-                        statusBadge = `<span class="text-xs font-bold text-gray-400 tracking-wide">${hours}:${mins}</span>`;
-                    }
-
-                    leagueHTML += `
-                        <div class="p-4 sm:p-5 flex items-center justify-between hover:bg-white/[0.01] transition-all duration-150">
-                            <!-- Levá sekce: Stav / Čas -->
-                            <div class="w-16 sm:w-24 flex flex-col justify-center">
-                                ${statusBadge}
-                            </div>
-
-                            <!-- Střední sekce: Týmy -->
-                            <div class="flex-grow flex flex-col gap-2 px-4">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-sm font-semibold text-gray-200 hover:text-white transition-all cursor-pointer">${match.homeTeam.name}</span>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <span class="text-sm font-semibold text-gray-200 hover:text-white transition-all cursor-pointer">${match.awayTeam.name}</span>
-                                </div>
-                            </div>
-
-                            <!-- Pravá sekce: Skóre -->
-                            <div class="flex items-center gap-5">
-                                <div class="flex flex-col gap-2 items-end justify-center text-right font-mono text-base ${scoreClass}">
-                                    <div>${homeScore}</div>
-                                    <div>${awayScore}</div>
-                                </div>
-                                
-                                <!-- Hvězdička na přidání k oblíbeným -->
-                                <button onclick="toggleFavorite(this)" class="text-gray-600 hover:text-yellow-400 transition-all p-1">
-                                    <i class="fa-regular fa-star text-sm"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                leagueHTML += `
-                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                  <div className="md:col-span-5 flex items-center justify-between bg-sport-dark-card/50 p-2.5 rounded-xl border border-sport-dark-border">
+                    <div className="flex items-center gap-2 truncate">
+                      <span className={`w-2.5 h-2.5 rounded-full ${match.homeLogoColor || 'bg-slate-500'} shrink-0`} />
+                      <span className="font-semibold text-xs text-slate-200 truncate">{match.homeTeam}</span>
                     </div>
-                `;
-                container.innerHTML += leagueHTML;
-            }
-        }
 
-        // Toggle oblíbených (vizuální změna)
-        function toggleFavorite(btn) {
-            const star = btn.querySelector('i');
-            if (star.classList.contains('fa-regular')) {
-                star.className = 'fa-solid fa-star text-yellow-400';
-            } else {
-                star.className = 'fa-regular fa-star text-gray-600';
-            }
-        }
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        onClick={() => onUpdateScore(match.id, 'home', -1)}
+                        className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="font-mono text-base font-bold text-white min-w-[18px] text-center">{match.homeScore}</span>
+                      <button
+                        onClick={() => onUpdateScore(match.id, 'home', 1)}
+                        className="w-7 h-7 flex items-center justify-center bg-neon-green/10 text-neon-green hover:bg-neon-green hover:text-black rounded-lg"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
 
-        // Pomocník pro změnu stavu obrazovky
-        function toggleUIState(state) {
-            const loading = document.getElementById('loading-state');
-            const error = document.getElementById('error-state');
-            const matches = document.getElementById('matches-container');
+                  <div className="md:col-span-2 text-center text-xs font-bold text-slate-500">VS</div>
 
-            if (state === 'loading') {
-                loading.classList.remove('hidden');
-                error.classList.add('hidden');
-                matches.classList.add('hidden');
-            } else if (state === 'error') {
-                loading.classList.add('hidden');
-                error.classList.remove('hidden');
-                matches.classList.add('hidden');
-            } else if (state === 'data') {
-                loading.classList.add('hidden');
-                error.classList.add('hidden');
-                matches.classList.remove('hidden');
-            }
-        }
-    </script>
-</body>
-</html>
+                  <div className="md:col-span-5 flex items-center justify-between bg-sport-dark-card/50 p-2.5 rounded-xl border border-sport-dark-border">
+                    <div className="flex items-center gap-2 truncate">
+                      <span className={`w-2.5 h-2.5 rounded-full ${match.awayLogoColor || 'bg-slate-500'} shrink-0`} />
+                      <span className="font-semibold text-xs text-slate-200 truncate">{match.awayTeam}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        onClick={() => onUpdateScore(match.id, 'away', -1)}
+                        className="w-7 h-7 flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="font-mono text-base font-bold text-white min-w-[18px] text-center">{match.awayScore}</span>
+                      <button
+                        onClick={() => onUpdateScore(match.id, 'away', 1)}
+                        className="w-7 h-7 flex items-center justify-center bg-neon-green/10 text-neon-green hover:bg-neon-green hover:text-black rounded-lg"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-sport-dark-border grid grid-cols-2 gap-4 items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Stav:</span>
+                    <select
+                      value={match.status}
+                      onChange={(e) => onUpdateStatus(match.id, e.target.value as MatchStatus)}
+                      className={`text-xs rounded-lg px-2 py-1.5 bg-sport-dark-card border border-sport-dark-border font-semibold cursor-pointer ${
+                        match.status === 'ŽIVĚ' ? 'text-neon-green' : match.status === 'Poločas' ? 'text-neon-blue' : 'text-slate-300'
+                      }`}
+                    >
+                      <option value="Plánováno">Plánováno</option>
+                      <option value="ŽIVĚ">ŽIVĚ</option>
+                      <option value="Poločas">Poločas</option>
+                      <option value="Konec">Ukončeno</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-1.5">
+                    {editingDetailId === match.id ? (
+                      <div className="flex items-center gap-1 w-full max-w-[180px]">
+                        <input
+                          type="text"
+                          value={tempDetailText}
+                          onChange={(e) => setTempDetailText(e.target.value)}
+                          className="w-full text-xs bg-sport-dark-card border border-sport-dark-border rounded px-2 py-1 text-white"
+                          onKeyDown={(e) => e.key === 'Enter' && handleSaveDetail(match.id)}
+                          autoFocus
+                        />
+                        <button onClick={() => handleSaveDetail(match.id)} className="p-1 bg-neon-green text-black rounded"><Check className="w-3 h-3 stroke-[2.5]" /></button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleStartEditingDetail(match)}
+                        className="group flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-200"
+                      >
+                        <span className="truncate max-w-[120px]">{match.detailText || <span className="italic text-slate-600">Bez textu...</span>}</span>
+                        <FileEdit className="w-3.5 h-3.5 text-slate-600 group-hover:text-neon-green" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
